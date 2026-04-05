@@ -437,13 +437,14 @@ function startMotionPoll() {
   motionTimer = setTimeout(async () => {
     if (!ocrBusy && isRunning && regionChanged()) {
       ocrBusy = true;
-      await runOCR();
+      const recorded = await runOCR();
       ocrBusy = false;
-      if (isRunning) motionTimer = setTimeout(startMotionPoll, 3000); // cooldown
+      // Recorded a name → pause 15 s; otherwise → 5 s
+      if (isRunning) motionTimer = setTimeout(startMotionPoll, recorded ? 15000 : 5000);
     } else {
       startMotionPoll();
     }
-  }, 500);
+  }, 5000);
 }
 
 // Off-screen canvas for OCR
@@ -507,9 +508,10 @@ async function runOCR() {
   try {
     const { data: { text } } = await worker.recognize(offCanvas.toDataURL('image/png'));
     console.log(`[OCR] ${new Date().toTimeString().slice(0,8)}\n${text}`);
-    parseText(text);
+    return parseText(text); // returns true if a name was recorded
   } catch (err) {
     console.error('[OCR] error:', err);
+    return false;
   }
 }
 
@@ -532,14 +534,15 @@ function parseText(raw) {
     candidates.add(m[0]);
 
   // Use the longest candidate as the name (most likely to be the full name)
-  if (candidates.size === 0) return;
+  if (candidates.size === 0) return false;
   const name = [...candidates].sort((a, b) => b.length - a.length)[0];
 
   const now = Date.now();
-  if (recentNames.has(name) && now - recentNames.get(name) < 5000) return;
+  if (recentNames.has(name) && now - recentNames.get(name) < 5000) return false;
   recentNames.set(name, now);
 
   addItem(name);
+  return true;
 }
 
 // ── Add name to list ───────────────────────────────────────────────────────────
