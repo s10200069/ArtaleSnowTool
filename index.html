@@ -77,6 +77,11 @@
       flex-direction: column;
       padding: 12px;
       gap: 10px;
+      transition: width .2s;
+    }
+
+    .control-panel.fullwidth {
+      width: 100%;
     }
 
     .buttons { display: flex; gap: 8px; }
@@ -100,7 +105,8 @@
     #toggleBtn     { background: #2e7d4f; color: #fff; }
     #toggleBtn.stop { background: #8b2020; }
     #clearBtn      { background: #3a3f55; color: #ccc; }
-    #stopShareBtn  { background: #5a3a3a; color: #ccc; }
+    #stopShareBtn      { background: #5a3a3a; color: #ccc; }
+    #togglePreviewBtn  { background: #3a3f55; color: #ccc; }
 
     .progress-bar {
       height: 2px;
@@ -176,6 +182,44 @@
     .item-time { font-size: 11px; color: #445566; flex-shrink: 0; }
 
     .empty-hint { text-align: center; color: #334455; font-size: 13px; padding: 30px 10px; }
+
+    /* Snowflake ending reminder */
+    #snowAlert {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: linear-gradient(135deg, #1a2a4a, #0f1117);
+      border: 2px solid #7eb8f7;
+      border-radius: 12px;
+      padding: 24px 36px;
+      text-align: center;
+      z-index: 9999;
+      box-shadow: 0 0 40px #7eb8f744;
+      animation: pulse 1s ease-in-out infinite alternate;
+    }
+    #snowAlert.show { display: block; }
+    #snowAlert .alert-icon { font-size: 36px; }
+    #snowAlert .alert-text { font-size: 20px; font-weight: bold; color: #7eb8f7; margin-top: 8px; }
+    #snowAlert .alert-sub  { font-size: 13px; color: #8899aa; margin-top: 4px; }
+    #alertOkBtn {
+      margin-top: 16px;
+      padding: 7px 28px;
+      background: #7eb8f7;
+      color: #0f1117;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #alertOkBtn:hover { filter: brightness(1.15); }
+
+    @keyframes pulse {
+      from { box-shadow: 0 0 20px #7eb8f744; }
+      to   { box-shadow: 0 0 50px #7eb8f7aa; }
+    }
   </style>
 </head>
 <body>
@@ -200,6 +244,7 @@
       <button id="toggleBtn" disabled>開始</button>
       <button id="clearBtn">清除</button>
       <button id="stopShareBtn" disabled>中斷共享</button>
+      <button id="togglePreviewBtn">隱藏畫面</button>
     </div>
 
     <div class="progress-bar">
@@ -221,6 +266,14 @@
     </div>
 
   </div>
+</div>
+
+<!-- Snowflake ending reminder overlay -->
+<div id="snowAlert">
+  <div class="alert-icon">❄️</div>
+  <div class="alert-text">雪花即將結束！</div>
+  <div class="alert-sub">施放時間約剩 10 秒</div>
+  <button id="alertOkBtn">確定</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -246,7 +299,18 @@ const canvasWrap    = document.getElementById('canvasWrap');
 const captureBtn    = document.getElementById('captureBtn');
 const toggleBtn     = document.getElementById('toggleBtn');
 const clearBtn      = document.getElementById('clearBtn');
-const stopShareBtn  = document.getElementById('stopShareBtn');
+const stopShareBtn       = document.getElementById('stopShareBtn');
+const togglePreviewBtn   = document.getElementById('togglePreviewBtn');
+const previewPanel       = document.querySelector('.preview-panel');
+
+const controlPanel = document.querySelector('.control-panel');
+
+togglePreviewBtn.addEventListener('click', () => {
+  const hidden = previewPanel.style.display === 'none';
+  previewPanel.style.display = hidden ? '' : 'none';
+  controlPanel.classList.toggle('fullwidth', !hidden);
+  togglePreviewBtn.textContent = hidden ? '隱藏畫面' : '開啟畫面';
+});
 const statusDot     = document.getElementById('statusDot');
 const statusText    = document.getElementById('statusText');
 const nameList      = document.getElementById('nameList');
@@ -528,8 +592,16 @@ async function runOCR() {
   }
   offCtx.putImageData(id, 0, 0);
 
+  // Scale up 2x — improves Tesseract accuracy on small / stylised game fonts
+  const scaled   = document.createElement('canvas');
+  scaled.width   = offCanvas.width  * 2;
+  scaled.height  = offCanvas.height * 2;
+  const sCtx     = scaled.getContext('2d');
+  sCtx.imageSmoothingEnabled = false;
+  sCtx.drawImage(offCanvas, 0, 0, scaled.width, scaled.height);
+
   try {
-    const { data: { text } } = await worker.recognize(offCanvas.toDataURL('image/png'));
+    const { data: { text } } = await worker.recognize(scaled);
     console.log(`[OCR] ${new Date().toTimeString().slice(0,8)}\n${text}`);
     return parseText(text);
   } catch (err) {
@@ -545,24 +617,38 @@ function parseText(raw) {
   for (let i = 0; i < 4; i++)
     cleaned = cleaned.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
 
-  // Collect all CJK sequences (2+ chars) and ASCII words (4+ chars) from the result
-  const candidates = new Set();
+  // Match anything before a colon (full-width or half-width)
+  const match = cleaned.match(/(.+?)[：:]/);
+  if (!match) return false;
 
-  // CJK sequences
-  for (const m of cleaned.matchAll(/[\u4e00-\u9fff\u3400-\u4dbf]{2,14}/g))
-    candidates.add(m[0]);
-
-  // English-only names (4+ alphanumeric chars, e.g. "Alice", "MapleStar")
-  for (const m of cleaned.matchAll(/[a-zA-Z0-9]{4,14}/g))
-    candidates.add(m[0]);
-
-  // Use the longest candidate as the name (most likely to be the full name)
-  if (candidates.size === 0) return false;
-  const name = [...candidates].sort((a, b) => b.length - a.length)[0];
+  const name = match[1].trim();
+  if (!name) return false;
 
   addItem(name);
   return true;
 }
+
+// ── Snowflake ending reminder (9 min after last record) ───────────────────────
+const snowAlert    = document.getElementById('snowAlert');
+let alertTimer     = null;
+let alertHideTimer = null;
+
+function scheduleAlert() {
+  clearTimeout(alertTimer);
+  clearTimeout(alertHideTimer);
+  alertTimer = setTimeout(() => {
+    snowAlert.classList.add('show');
+    // Auto-close after 10 s
+    alertHideTimer = setTimeout(closeAlert, 10000);
+  }, 9 * 60 * 1000 + 50 * 1000);
+}
+
+function closeAlert() {
+  clearTimeout(alertHideTimer);
+  snowAlert.classList.remove('show');
+}
+
+document.getElementById('alertOkBtn').addEventListener('click', closeAlert);
 
 // ── Add name to list ───────────────────────────────────────────────────────────
 function addItem(name) {
@@ -581,6 +667,9 @@ function addItem(name) {
   nameList.appendChild(div);
   nameList.scrollTop = nameList.scrollHeight;
   countBadge.textContent = items.length + ' 筆';
+
+  // Reset the 9-minute countdown every time a record is written
+  scheduleAlert();
 }
 
 // ── Clear ──────────────────────────────────────────────────────────────────────
