@@ -107,6 +107,98 @@
     #clearBtn      { background: #3a3f55; color: #ccc; }
     #stopShareBtn      { background: #5a3a3a; color: #ccc; }
     #togglePreviewBtn  { background: #3a3f55; color: #ccc; }
+    #earlyDetectBtn    { background: #4a3f20; color: #f0c040; }
+    #earlyDetectBtn:not(:disabled):hover { filter: brightness(1.2); }
+    #nameListBtn       { background: #2e4a3a; color: #3dcc7a; }
+
+    /* ── Name roster modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #1a1d27;
+      border: 1px solid #2e3147;
+      border-radius: 10px;
+      padding: 20px;
+      width: 340px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal h2 { font-size: 15px; color: #7eb8f7; }
+
+    .modal-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .modal-input-row input {
+      flex: 1;
+      background: #12141e;
+      border: 1px solid #2e3147;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 7px 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+    .modal-input-row input:focus { border-color: #7eb8f7; }
+
+    .modal-input-row button { flex: none; padding: 7px 14px; font-size: 13px; }
+    #rosterAddBtn  { background: #2e7d4f; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+    #rosterAddBtn:hover { filter: brightness(1.15); }
+
+    .roster-list {
+      flex: 1;
+      overflow-y: auto;
+      background: #12141e;
+      border: 1px solid #2e3147;
+      border-radius: 6px;
+    }
+    .roster-list::-webkit-scrollbar { width: 5px; }
+    .roster-list::-webkit-scrollbar-thumb { background: #2e3147; border-radius: 3px; }
+
+    .roster-item {
+      display: flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-bottom: 1px solid #1e2030;
+      gap: 8px;
+    }
+    .roster-item:last-child { border-bottom: none; }
+    .roster-item-name { flex: 1; font-size: 13px; color: #ddeeff; }
+    .roster-item-hint { font-size: 11px; color: #445566; flex-shrink: 0; }
+
+    .roster-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .roster-btn.edit   { color: #f0c040; }
+    .roster-btn.edit:hover { background: #3a3a20; }
+    .roster-btn.del    { color: #cc5555; }
+    .roster-btn.del:hover  { background: #3a2020; }
+
+    .roster-empty { text-align: center; color: #334455; font-size: 13px; padding: 20px; }
+
+    .modal-close-row { display: flex; justify-content: flex-end; }
+    .modal-close-row button { background: #3a3f55; color: #ccc; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .modal-close-row button:hover { filter: brightness(1.15); }
 
     .progress-bar {
       height: 2px;
@@ -245,6 +337,8 @@
       <button id="clearBtn">清除</button>
       <button id="stopShareBtn" disabled>中斷共享</button>
       <button id="togglePreviewBtn">隱藏畫面</button>
+      <button id="earlyDetectBtn" disabled>提前偵測</button>
+      <button id="nameListBtn">角色名單</button>
     </div>
 
     <div class="progress-bar">
@@ -254,6 +348,7 @@
     <div class="status-bar">
       <div class="dot" id="statusDot"></div>
       <span id="statusText">點選「選擇畫面」</span>
+      <span id="countdownText" style="margin-left:auto;font-size:12px;color:#f0c040;display:none;"></span>
     </div>
 
     <div class="list-header">
@@ -268,11 +363,27 @@
   </div>
 </div>
 
+<!-- Name roster modal -->
+<div class="modal-overlay" id="rosterModal">
+  <div class="modal">
+    <h2>角色名單</h2>
+    <div class="modal-input-row">
+      <input id="rosterInput" type="text" placeholder="輸入角色名稱…" maxlength="14" />
+      <button id="rosterAddBtn">新增</button>
+    </div>
+    <div class="roster-list" id="rosterList">
+      <div class="roster-empty">尚無名稱</div>
+    </div>
+    <div class="modal-close-row">
+      <button id="rosterCloseBtn">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- Snowflake ending reminder overlay -->
 <div id="snowAlert">
   <div class="alert-icon">❄️</div>
-  <div class="alert-text">雪花即將結束！</div>
-  <div class="alert-sub">施放時間約剩 10 秒</div>
+  <div class="alert-text">雪花將於10秒後消失</div>
   <button id="alertOkBtn">確定</button>
 </div>
 
@@ -508,6 +619,8 @@ function stopTracking() {
   clearTimeout(motionTimer);
   toggleBtn.textContent = '開始';
   toggleBtn.classList.remove('stop');
+  earlyDetectBtn.disabled = true;
+  stopCountdown();
   setStatus('', '已停止');
 }
 
@@ -516,7 +629,68 @@ let prevSample = null;
 
 let firstDetection = true; // resets when tracking starts
 
-function startMotionPoll(interval = 1000) {
+const earlyDetectBtn  = document.getElementById('earlyDetectBtn');
+const countdownText   = document.getElementById('countdownText');
+let countdownInterval = null;
+
+function startCountdown(seconds) {
+  clearInterval(countdownInterval);
+  clearTimeout(alertTimer);
+  clearTimeout(alertHideTimer);
+  countdownText.style.display = 'inline';
+  let remaining = seconds;
+
+  // Show popup when 10 seconds remain
+  alertTimer = setTimeout(() => {
+    snowAlert.classList.add('show');
+    alertHideTimer = setTimeout(closeAlert, 10000);
+  }, (seconds - 10) * 1000);
+
+  function update() {
+    const m = Math.floor(remaining / 60).toString().padStart(2, '0');
+    const s = (remaining % 60).toString().padStart(2, '0');
+    countdownText.textContent = `下次偵測 ${m}:${s}`;
+    if (remaining <= 0) stopCountdown();
+    else remaining--;
+  }
+
+  update();
+  countdownInterval = setInterval(update, 1000);
+}
+
+function stopCountdown() {
+  clearInterval(countdownInterval);
+  countdownText.style.display = 'none';
+  // Cancel any pending alert when countdown is cleared
+  clearTimeout(alertTimer);
+  clearTimeout(alertHideTimer);
+  closeAlert();
+}
+
+earlyDetectBtn.addEventListener('click', async () => {
+  if (ocrBusy || !isRunning) return;
+  // Cancel the 10-min wait and trigger OCR immediately
+  clearTimeout(motionTimer);
+  stopCountdown();
+  earlyDetectBtn.disabled = true;
+  ocrBusy = true;
+  await runOCR();
+  ocrBusy = false;
+  // Reset: back to 1 s polling (firstDetection already false, so next record → 10 min wait)
+  startMotionPoll();
+});
+
+function setWaiting(waiting) {
+  earlyDetectBtn.disabled = !waiting;
+  if (waiting) {
+    startCountdown(10 * 60);
+  } else {
+    stopCountdown(); // also cancels alert inside
+  }
+}
+
+function startMotionPoll() {
+  setWaiting(false);
   if (!isRunning) return;
   motionTimer = setTimeout(async () => {
     if (!ocrBusy && isRunning) {
@@ -525,13 +699,14 @@ function startMotionPoll(interval = 1000) {
       ocrBusy = false;
       if (recorded) {
         firstDetection = false;
-        // After a successful record, pause 15 s then switch to 5 s interval
-        if (isRunning) motionTimer = setTimeout(() => startMotionPoll(5000), 15000);
+        // After every record, wait 10 minutes then resume polling
+        setWaiting(true);
+        if (isRunning) motionTimer = setTimeout(startMotionPoll, 10 * 60 * 1000);
         return;
       }
     }
-    startMotionPoll(firstDetection ? 1000 : 5000);
-  }, interval);
+    startMotionPoll();
+  }, 1000);
 }
 
 // Off-screen canvas for OCR
@@ -610,6 +785,96 @@ async function runOCR() {
   }
 }
 
+// ── Name roster ───────────────────────────────────────────────────────────────
+const rosterModal    = document.getElementById('rosterModal');
+const rosterInput    = document.getElementById('rosterInput');
+const rosterList     = document.getElementById('rosterList');
+const rosterAddBtn   = document.getElementById('rosterAddBtn');
+const rosterCloseBtn = document.getElementById('rosterCloseBtn');
+
+document.getElementById('nameListBtn').addEventListener('click', () => {
+  rosterModal.classList.add('open');
+  rosterInput.focus();
+});
+rosterCloseBtn.addEventListener('click', () => rosterModal.classList.remove('open'));
+rosterModal.addEventListener('click', e => { if (e.target === rosterModal) rosterModal.classList.remove('open'); });
+
+// Roster data: [{ name }]
+const roster = [];
+let editingIndex = null;
+
+rosterAddBtn.addEventListener('click', commitRoster);
+rosterInput.addEventListener('keydown', e => { if (e.key === 'Enter') commitRoster(); });
+
+function commitRoster() {
+  const name = rosterInput.value.trim();
+  if (!name) return;
+
+  if (editingIndex !== null) {
+    roster[editingIndex].name = name;
+    editingIndex = null;
+    rosterAddBtn.textContent = '新增';
+  } else {
+    if (roster.some(r => r.name === name)) { rosterInput.value = ''; return; } // no duplicate
+    roster.push({ name });
+  }
+
+  rosterInput.value = '';
+  renderRoster();
+}
+
+function renderRoster() {
+  if (roster.length === 0) {
+    rosterList.innerHTML = '<div class="roster-empty">尚無名稱</div>';
+    return;
+  }
+  rosterList.innerHTML = '';
+  roster.forEach((r, i) => {
+    const minMatch = Math.max(1, Math.floor(r.name.length / 2));
+    const div = document.createElement('div');
+    div.className = 'roster-item';
+    div.innerHTML = `
+      <span class="roster-item-name">${escHtml(r.name)}</span>
+      <span class="roster-item-hint">對 ${minMatch} 字</span>
+      <button class="roster-btn edit" data-i="${i}">編輯</button>
+      <button class="roster-btn del"  data-i="${i}">刪除</button>
+    `;
+    rosterList.appendChild(div);
+  });
+
+  rosterList.querySelectorAll('.roster-btn.edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editingIndex = +btn.dataset.i;
+      rosterInput.value = roster[editingIndex].name;
+      rosterAddBtn.textContent = '儲存';
+      rosterInput.focus();
+    });
+  });
+
+  rosterList.querySelectorAll('.roster-btn.del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      roster.splice(+btn.dataset.i, 1);
+      if (editingIndex !== null) { editingIndex = null; rosterAddBtn.textContent = '新增'; rosterInput.value = ''; }
+      renderRoster();
+    });
+  });
+}
+
+// Match OCR text against roster.
+// Returns the full name from roster if at least floor(name.length/2) consecutive
+// characters (case-insensitive) are found in the OCR string, otherwise null.
+function matchRoster(ocrName) {
+  for (const r of roster) {
+    const need = Math.max(1, Math.floor(r.name.length / 2));
+    // Try every consecutive substring of length `need` from the roster name (case-sensitive)
+    for (let start = 0; start <= r.name.length - need; start++) {
+      const sub = r.name.slice(start, start + need);
+      if (ocrName.includes(sub)) return r.name;
+    }
+  }
+  return null;
+}
+
 // ── Parse OCR text ─────────────────────────────────────────────────────────────
 function parseText(raw) {
   // Remove spaces inserted between adjacent CJK characters by Tesseract
@@ -617,14 +882,21 @@ function parseText(raw) {
   for (let i = 0; i < 4; i++)
     cleaned = cleaned.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
 
-  // Match anything before a colon (full-width or half-width)
-  const match = cleaned.match(/(.+?)[：:]/);
-  if (!match) return false;
+  let finalName = null;
 
-  const name = match[1].trim();
-  if (!name) return false;
+  if (roster.length > 0) {
+    // Roster set → always use roster matching logic
+    finalName = matchRoster(cleaned);
+    if (!finalName) return false;
+  } else {
+    // No roster → use colon logic
+    const colonMatch = cleaned.match(/(.+?)[：:]/);
+    if (!colonMatch) return false;
+    finalName = colonMatch[1].trim() || null;
+    if (!finalName) return false;
+  }
 
-  addItem(name);
+  addItem(finalName);
   return true;
 }
 
