@@ -96,10 +96,11 @@
     button:not(:disabled):hover  { filter: brightness(1.15); }
     button:not(:disabled):active { filter: brightness(.85); }
 
-    #captureBtn { background: #3a5fa0; color: #fff; }
-    #toggleBtn  { background: #2e7d4f; color: #fff; }
+    #captureBtn    { background: #3a5fa0; color: #fff; }
+    #toggleBtn     { background: #2e7d4f; color: #fff; }
     #toggleBtn.stop { background: #8b2020; }
-    #clearBtn   { background: #3a3f55; color: #ccc; }
+    #clearBtn      { background: #3a3f55; color: #ccc; }
+    #stopShareBtn  { background: #5a3a3a; color: #ccc; }
 
     .progress-bar {
       height: 2px;
@@ -198,6 +199,7 @@
       <button id="captureBtn">選擇畫面</button>
       <button id="toggleBtn" disabled>開始</button>
       <button id="clearBtn">清除</button>
+      <button id="stopShareBtn" disabled>中斷共享</button>
     </div>
 
     <div class="progress-bar">
@@ -244,6 +246,7 @@ const canvasWrap    = document.getElementById('canvasWrap');
 const captureBtn    = document.getElementById('captureBtn');
 const toggleBtn     = document.getElementById('toggleBtn');
 const clearBtn      = document.getElementById('clearBtn');
+const stopShareBtn  = document.getElementById('stopShareBtn');
 const statusDot     = document.getElementById('statusDot');
 const statusText    = document.getElementById('statusText');
 const nameList      = document.getElementById('nameList');
@@ -274,8 +277,11 @@ captureBtn.addEventListener('click', async () => {
     stream.getVideoTracks()[0].addEventListener('ended', () => {
       stopTracking();
       toggleBtn.disabled = true;
+      stopShareBtn.disabled = true;
       setStatus('', '畫面擷取已停止');
     });
+
+    stopShareBtn.disabled = false;
 
   } catch (_) {
     setStatus('', '已取消或不支援螢幕擷取');
@@ -385,6 +391,17 @@ previewCanvas.addEventListener('mouseup', e => {
   previewLabel.textContent = `已選取 ${rw}×${rh} 區域（可重新拖曳調整）`;
 });
 
+// ── Stop share ────────────────────────────────────────────────────────────────
+stopShareBtn.addEventListener('click', () => {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  stopTracking();
+  toggleBtn.disabled = true;
+  stopShareBtn.disabled = true;
+  region = null;
+  setStatus('', '畫面擷取已停止');
+});
+
 // ── Start / Stop ───────────────────────────────────────────────────────────────
 toggleBtn.addEventListener('click', () => {
   if (isRunning) stopTracking();
@@ -413,6 +430,7 @@ async function startTracking() {
   isRunning = true;
   ocrBusy   = false;
   prevSample = null;
+  firstDetection = true;
   toggleBtn.textContent = '停止';
   toggleBtn.classList.add('stop');
   toggleBtn.disabled = false;
@@ -432,19 +450,24 @@ function stopTracking() {
 // ── Motion poll: triggers OCR when the selected region changes visibly ─────────
 let prevSample = null;
 
-function startMotionPoll() {
+let firstDetection = true; // resets when tracking starts
+
+function startMotionPoll(interval = 1000) {
   if (!isRunning) return;
   motionTimer = setTimeout(async () => {
-    if (!ocrBusy && isRunning && regionChanged()) {
+    if (!ocrBusy && isRunning) {
       ocrBusy = true;
       const recorded = await runOCR();
       ocrBusy = false;
-      // Recorded a name → pause 15 s; otherwise → 5 s
-      if (isRunning) motionTimer = setTimeout(startMotionPoll, recorded ? 15000 : 5000);
-    } else {
-      startMotionPoll();
+      if (recorded) {
+        firstDetection = false;
+        // After a successful record, pause 15 s then switch to 5 s interval
+        if (isRunning) motionTimer = setTimeout(() => startMotionPoll(5000), 15000);
+        return;
+      }
     }
-  }, 5000);
+    startMotionPoll(firstDetection ? 1000 : 5000);
+  }, interval);
 }
 
 // Off-screen canvas for OCR
@@ -508,7 +531,7 @@ async function runOCR() {
   try {
     const { data: { text } } = await worker.recognize(offCanvas.toDataURL('image/png'));
     console.log(`[OCR] ${new Date().toTimeString().slice(0,8)}\n${text}`);
-    return parseText(text); // returns true if a name was recorded
+    return parseText(text);
   } catch (err) {
     console.error('[OCR] error:', err);
     return false;
@@ -536,10 +559,6 @@ function parseText(raw) {
   // Use the longest candidate as the name (most likely to be the full name)
   if (candidates.size === 0) return false;
   const name = [...candidates].sort((a, b) => b.length - a.length)[0];
-
-  const now = Date.now();
-  if (recentNames.has(name) && now - recentNames.get(name) < 5000) return false;
-  recentNames.set(name, now);
 
   addItem(name);
   return true;
