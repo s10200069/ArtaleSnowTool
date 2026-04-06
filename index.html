@@ -109,6 +109,7 @@
     #togglePreviewBtn  { background: #3a3f55; color: #ccc; }
     #earlyDetectBtn    { background: #4a3f20; color: #f0c040; }
     #earlyDetectBtn:not(:disabled):hover { filter: brightness(1.2); }
+    #stopCountdownBtn  { background: #5a3a3a; color: #ff8888; }
     #nameListBtn       { background: #2e4a3a; color: #3dcc7a; }
 
     /* ── Name roster modal ── */
@@ -157,7 +158,10 @@
 
     .modal-input-row button { flex: none; padding: 7px 14px; font-size: 13px; }
     #rosterAddBtn  { background: #2e7d4f; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+    #rosterAddBtn.saving { background: #3a5fa0; }
     #rosterAddBtn:hover { filter: brightness(1.15); }
+    #rosterCancelBtn { background: #3a3f55; color: #ccc; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; padding: 7px 10px; font-size: 13px; font-family: inherit; }
+    #rosterCancelBtn:hover { filter: brightness(1.15); }
 
     .roster-list {
       flex: 1;
@@ -259,19 +263,92 @@
     .name-item {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
       padding: 8px 12px;
       border-bottom: 1px solid #1e2030;
-      animation: fadeIn .25s ease;
     }
+    .name-item.new-item { animation: fadeIn .25s ease; }
     .name-item:last-child { border-bottom: none; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
     .item-idx  { font-size: 11px; color: #445566; width: 22px; text-align: right; flex-shrink: 0; }
-    .item-name { flex: 1; font-size: 14px; color: #ddeeff; }
+    .item-name { flex: 1; font-size: 14px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .item-time { font-size: 11px; color: #445566; flex-shrink: 0; }
+
+    .item-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      font-family: inherit;
+      font-weight: 600;
+    }
+    .item-btn.edit   { color: #f0c040; }
+    .item-btn.edit:hover   { background: #3a3a20; }
+    .item-btn.del    { color: #cc5555; }
+    .item-btn.del:hover    { background: #3a2020; }
+    .item-btn.save   { color: #3dcc7a; }
+    .item-btn.save:hover   { background: #1a3a2a; }
+    .item-btn.cancel { color: #8899aa; }
+    .item-btn.cancel:hover { background: #2a2a3a; }
+
+    .name-item.editing {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+    }
+    .item-edit-row { display: flex; gap: 4px; }
+    .item-edit-select {
+      width: 100%;
+      background: #12141e;
+      border: 1px solid #2e3147;
+      border-radius: 4px;
+      color: #e0e0e0;
+      padding: 4px 6px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      margin-top: 2px;
+    }
+    .item-edit-select:focus { border-color: #7eb8f7; }
+    .item-edit-input {
+      flex: 1;
+      background: #12141e;
+      border: 1px solid #7eb8f7;
+      border-radius: 4px;
+      color: #e0e0e0;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      width: 100%;
+    }
+
+    .manual-add-row {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .manual-add-row select {
+      flex: 1;
+      background: #12141e;
+      border: 1px solid #2e3147;
+      border-radius: 6px;
+      color: #e0e0e0;
+      padding: 6px 8px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .manual-add-row select:focus { border-color: #7eb8f7; }
+    #manualAddBtn { background: #2e7d4f; color: #fff; flex: none; padding: 6px 12px; font-size: 13px; border-radius: 6px; }
 
     .empty-hint { text-align: center; color: #334455; font-size: 13px; padding: 30px 10px; }
 
@@ -338,6 +415,7 @@
       <button id="stopShareBtn" disabled>中斷共享</button>
       <button id="togglePreviewBtn">隱藏畫面</button>
       <button id="earlyDetectBtn" disabled>提前偵測</button>
+      <button id="stopCountdownBtn" disabled>停止倒數</button>
       <button id="nameListBtn">角色名單</button>
     </div>
 
@@ -356,6 +434,11 @@
       <span id="countBadge">0 筆</span>
     </div>
 
+    <div class="manual-add-row">
+      <select id="manualSelect"><option value="">— 選擇角色 —</option></select>
+      <button id="manualAddBtn">加入</button>
+    </div>
+
     <div class="list-container" id="nameList">
       <div class="empty-hint">尚無紀錄</div>
     </div>
@@ -370,6 +453,7 @@
     <div class="modal-input-row">
       <input id="rosterInput" type="text" placeholder="輸入角色名稱…" maxlength="14" />
       <button id="rosterAddBtn">新增</button>
+      <button id="rosterCancelBtn" style="display:none">取消</button>
     </div>
     <div class="roster-list" id="rosterList">
       <div class="roster-empty">尚無名稱</div>
@@ -389,6 +473,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+// ── Config ─────────────────────────────────────────────────────────────────────
+const WAIT_SEC = 20; 
+
 // ── State ──────────────────────────────────────────────────────────────────────
 let stream     = null;
 let worker     = null;
@@ -620,7 +707,6 @@ function stopTracking() {
   toggleBtn.textContent = '開始';
   toggleBtn.classList.remove('stop');
   earlyDetectBtn.disabled = true;
-  stopCountdown();
   setStatus('', '已停止');
 }
 
@@ -629,15 +715,17 @@ let prevSample = null;
 
 let firstDetection = true; // resets when tracking starts
 
-const earlyDetectBtn  = document.getElementById('earlyDetectBtn');
-const countdownText   = document.getElementById('countdownText');
-let countdownInterval = null;
+const earlyDetectBtn   = document.getElementById('earlyDetectBtn');
+const stopCountdownBtn = document.getElementById('stopCountdownBtn');
+const countdownText    = document.getElementById('countdownText');
+let countdownInterval  = null;
 
 function startCountdown(seconds) {
   clearInterval(countdownInterval);
   clearTimeout(alertTimer);
   clearTimeout(alertHideTimer);
   countdownText.style.display = 'inline';
+  stopCountdownBtn.disabled = false;
   let remaining = seconds;
 
   // Show popup when 10 seconds remain
@@ -649,7 +737,7 @@ function startCountdown(seconds) {
   function update() {
     const m = Math.floor(remaining / 60).toString().padStart(2, '0');
     const s = (remaining % 60).toString().padStart(2, '0');
-    countdownText.textContent = `下次偵測 ${m}:${s}`;
+    countdownText.textContent = `雪花剩餘時間 ${m}:${s}`;
     if (remaining <= 0) stopCountdown();
     else remaining--;
   }
@@ -661,6 +749,7 @@ function startCountdown(seconds) {
 function stopCountdown() {
   clearInterval(countdownInterval);
   countdownText.style.display = 'none';
+  stopCountdownBtn.disabled = true;
   // Cancel any pending alert when countdown is cleared
   clearTimeout(alertTimer);
   clearTimeout(alertHideTimer);
@@ -680,7 +769,7 @@ earlyDetectBtn.addEventListener('click', async () => {
     firstDetection = false;
     clearTimeout(motionTimer);
     setWaiting(true);
-    if (isRunning) motionTimer = setTimeout(startMotionPoll, 10 * 60 * 1000);
+    if (isRunning) motionTimer = setTimeout(startMotionPoll, WAIT_SEC * 1000);
   } else {
     startMotionPoll();
   }
@@ -689,7 +778,7 @@ earlyDetectBtn.addEventListener('click', async () => {
 function setWaiting(waiting) {
   earlyDetectBtn.disabled = !waiting;
   if (waiting) {
-    startCountdown(10 * 60);
+    startCountdown(WAIT_SEC);
   } else {
     stopCountdown(); // also cancels alert inside
   }
@@ -707,7 +796,7 @@ function startMotionPoll() {
         firstDetection = false;
         clearTimeout(motionTimer);
         setWaiting(true);
-        if (isRunning) motionTimer = setTimeout(startMotionPoll, 10 * 60 * 1000);
+        if (isRunning) motionTimer = setTimeout(startMotionPoll, WAIT_SEC * 1000);
         return;
       }
     }
@@ -795,7 +884,8 @@ async function runOCR() {
 const rosterModal    = document.getElementById('rosterModal');
 const rosterInput    = document.getElementById('rosterInput');
 const rosterList     = document.getElementById('rosterList');
-const rosterAddBtn   = document.getElementById('rosterAddBtn');
+const rosterAddBtn    = document.getElementById('rosterAddBtn');
+const rosterCancelBtn = document.getElementById('rosterCancelBtn');
 const rosterCloseBtn = document.getElementById('rosterCloseBtn');
 
 document.getElementById('nameListBtn').addEventListener('click', () => {
@@ -805,12 +895,37 @@ document.getElementById('nameListBtn').addEventListener('click', () => {
 rosterCloseBtn.addEventListener('click', () => rosterModal.classList.remove('open'));
 rosterModal.addEventListener('click', e => { if (e.target === rosterModal) rosterModal.classList.remove('open'); });
 
+// Manual add (in cast list panel)
+const manualSelect = document.getElementById('manualSelect');
+document.getElementById('manualAddBtn').addEventListener('click', () => {
+  const name = manualSelect.value;
+  if (!name) return;
+  addItem(name);
+  clearTimeout(motionTimer);
+  if (isRunning) {
+    setWaiting(true);
+    motionTimer = setTimeout(startMotionPoll, WAIT_SEC * 1000);
+  } else {
+    startCountdown(WAIT_SEC);
+  }
+});
+
 // Roster data: [{ name }]
 const roster = [];
 let editingIndex = null;
 
 rosterAddBtn.addEventListener('click', commitRoster);
-rosterInput.addEventListener('keydown', e => { if (e.key === 'Enter') commitRoster(); });
+rosterCancelBtn.addEventListener('click', () => {
+  editingIndex = null;
+  rosterAddBtn.textContent = '新增';
+  rosterAddBtn.classList.remove('saving');
+  rosterCancelBtn.style.display = 'none';
+  rosterInput.value = '';
+});
+rosterInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') commitRoster();
+  if (e.key === 'Escape' && editingIndex !== null) rosterCancelBtn.click();
+});
 
 function commitRoster() {
   const name = rosterInput.value.trim();
@@ -820,6 +935,8 @@ function commitRoster() {
     roster[editingIndex].name = name;
     editingIndex = null;
     rosterAddBtn.textContent = '新增';
+    rosterAddBtn.classList.remove('saving');
+    rosterCancelBtn.style.display = 'none';
   } else {
     if (roster.some(r => r.name === name)) { rosterInput.value = ''; return; } // no duplicate
     roster.push({ name });
@@ -830,6 +947,17 @@ function commitRoster() {
 }
 
 function renderRoster() {
+  // Sync the manual-add select in the main panel
+  const prev = manualSelect.value;
+  manualSelect.innerHTML = '<option value="">— 選擇角色 —</option>';
+  roster.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.name;
+    manualSelect.appendChild(opt);
+  });
+  if (roster.some(r => r.name === prev)) manualSelect.value = prev;
+
   if (roster.length === 0) {
     rosterList.innerHTML = '<div class="roster-empty">尚無名稱</div>';
     return;
@@ -853,6 +981,8 @@ function renderRoster() {
       editingIndex = +btn.dataset.i;
       rosterInput.value = roster[editingIndex].name;
       rosterAddBtn.textContent = '儲存';
+      rosterAddBtn.classList.add('saving');
+      rosterCancelBtn.style.display = '';
       rosterInput.focus();
     });
   });
@@ -860,7 +990,7 @@ function renderRoster() {
   rosterList.querySelectorAll('.roster-btn.del').forEach(btn => {
     btn.addEventListener('click', () => {
       roster.splice(+btn.dataset.i, 1);
-      if (editingIndex !== null) { editingIndex = null; rosterAddBtn.textContent = '新增'; rosterInput.value = ''; }
+      if (editingIndex !== null) { editingIndex = null; rosterAddBtn.textContent = '新增'; rosterAddBtn.classList.remove('saving'); rosterCancelBtn.style.display = 'none'; rosterInput.value = ''; }
       renderRoster();
     });
   });
@@ -923,7 +1053,7 @@ function scheduleAlert() {
     snowAlert.classList.add('show');
     // Auto-close after 10 s
     alertHideTimer = setTimeout(closeAlert, 10000);
-  }, 9 * 60 * 1000 + 50 * 1000);
+  }, (WAIT_SEC - 10) * 1000);
 }
 
 function closeAlert() {
@@ -932,24 +1062,96 @@ function closeAlert() {
 }
 
 document.getElementById('alertOkBtn').addEventListener('click', closeAlert);
+stopCountdownBtn.addEventListener('click', stopCountdown);
+
+// ── Name list render ──────────────────────────────────────────────────────────
+let editingItemIndex = null;
+
+function renderNameList(scrollToBottom = false) {
+  if (items.length === 0) {
+    nameList.innerHTML = '<div class="empty-hint">尚無紀錄</div>';
+    countBadge.textContent = '0 筆';
+    return;
+  }
+  nameList.innerHTML = '';
+  items.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'name-item';
+    if (editingItemIndex === i) {
+      div.classList.add('editing');
+      const rosterOpts = roster.map(r => `<option value="${escHtml(r.name)}">${escHtml(r.name)}</option>`).join('');
+      div.innerHTML = `
+        <input class="item-edit-input" value="${escHtml(item.name)}" maxlength="20" />
+        ${roster.length ? `<select class="item-edit-select"><option value="">— 選擇角色 —</option>${rosterOpts}</select>` : ''}
+        <div class="item-edit-row">
+          <button class="item-btn save" data-i="${i}" style="flex:1">確認</button>
+          <button class="item-btn cancel" data-i="${i}" style="flex:1">取消</button>
+        </div>
+      `;
+    } else {
+      div.classList.add('editing');
+      div.innerHTML = `
+        <div class="item-edit-row">
+          <span class="item-idx">${i + 1}</span>
+          <span class="item-name">${escHtml(item.name)}</span>
+          <span class="item-time">${item.time}</span>
+        </div>
+        <div class="item-edit-row">
+          <button class="item-btn edit" data-i="${i}" style="flex:1">編輯</button>
+          <button class="item-btn del"  data-i="${i}" style="flex:1">刪除</button>
+        </div>
+      `;
+    }
+    nameList.appendChild(div);
+  });
+
+  if (editingItemIndex !== null) {
+    const input  = nameList.querySelector('.item-edit-input');
+    const saveBtn = nameList.querySelector('.item-btn.save');
+    const cancelBtn = nameList.querySelector('.item-btn.cancel');
+    const editSelect = nameList.querySelector('.item-edit-select');
+    if (input) { input.focus(); input.select(); }
+    if (editSelect) editSelect.addEventListener('change', () => {
+      if (editSelect.value) { input.value = editSelect.value; editSelect.value = ''; input.focus(); }
+    });
+
+    function commitEdit() {
+      const v = input.value.trim();
+      if (v) items[editingItemIndex].name = v;
+      editingItemIndex = null;
+      renderNameList();
+    }
+    saveBtn.addEventListener('click', commitEdit);
+    cancelBtn.addEventListener('click', () => { editingItemIndex = null; renderNameList(); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') commitEdit();
+      if (e.key === 'Escape') { editingItemIndex = null; renderNameList(); }
+    });
+  }
+
+  nameList.querySelectorAll('.item-btn.edit').forEach(btn => {
+    btn.addEventListener('click', () => { editingItemIndex = +btn.dataset.i; renderNameList(); });
+  });
+  nameList.querySelectorAll('.item-btn.del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      items.splice(+btn.dataset.i, 1);
+      editingItemIndex = null;
+      renderNameList();
+    });
+  });
+
+  countBadge.textContent = items.length + ' 筆';
+  if (scrollToBottom) nameList.scrollTop = nameList.scrollHeight;
+}
 
 // ── Add name to list ───────────────────────────────────────────────────────────
 function addItem(name) {
   const time = new Date().toTimeString().slice(0, 8);
   items.push({ name, time });
-
-  if (nameList.querySelector('.empty-hint')) nameList.innerHTML = '';
-
-  const div = document.createElement('div');
-  div.className = 'name-item';
-  div.innerHTML = `
-    <span class="item-idx">${items.length}</span>
-    <span class="item-name">${escHtml(name)}</span>
-    <span class="item-time">${time}</span>
-  `;
-  nameList.appendChild(div);
-  nameList.scrollTop = nameList.scrollHeight;
-  countBadge.textContent = items.length + ' 筆';
+  renderNameList(true);
+  // Animate only the last item
+  const last = nameList.lastElementChild;
+  if (last) last.classList.add('new-item');
 
   // Reset the 9-minute countdown every time a record is written
   scheduleAlert();
@@ -960,8 +1162,8 @@ clearBtn.addEventListener('click', () => {
   items.length = 0;
   recentNames.clear();
   prevSample = null;
-  nameList.innerHTML = '<div class="empty-hint">尚無紀錄</div>';
-  countBadge.textContent = '0 筆';
+  editingItemIndex = null;
+  renderNameList();
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
