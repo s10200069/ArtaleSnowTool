@@ -884,15 +884,21 @@ function parseText(raw) {
   let finalName = null;
 
   if (roster.length > 0) {
-    // Roster set → always use roster matching logic
-    finalName = matchRoster(cleaned);
+    for (const line of cleaned.split('\n')) {
+      const lineTrimmed = line.trim();
+      if (!lineTrimmed) continue;
+      finalName = matchRoster(lineTrimmed);
+      if (!finalName) continue;
+      console.log(`[MATCH] roster="${finalName}" input="${lineTrimmed}"`);
+      break;
+    }
     if (!finalName) return false;
   } else {
-    // No roster → use colon logic
     const colonMatch = cleaned.match(/(.+?)[：:]/);
     if (!colonMatch) return false;
     finalName = colonMatch[1].trim() || null;
     if (!finalName) return false;
+    console.log(`[MATCH] colon="${finalName}" input="${colonMatch[0]}"`);
   }
 
   addItem(finalName);
