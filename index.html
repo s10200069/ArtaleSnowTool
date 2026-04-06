@@ -82,6 +82,12 @@
 
     .control-panel.fullwidth {
       width: 100%;
+      align-items: center;
+    }
+
+    .control-panel.fullwidth > * {
+      width: 100%;
+      max-width: 480px;
     }
 
     .buttons { display: flex; gap: 8px; }
@@ -262,10 +268,15 @@
 
     .name-item {
       display: flex;
-      align-items: center;
-      gap: 6px;
+      flex-direction: column;
+      gap: 4px;
       padding: 8px 12px;
       border-bottom: 1px solid #1e2030;
+    }
+    .item-info-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .name-item.new-item { animation: fadeIn .25s ease; }
     .name-item:last-child { border-bottom: none; }
@@ -276,6 +287,9 @@
     .item-idx  { font-size: 11px; color: #445566; width: 22px; text-align: right; flex-shrink: 0; }
     .item-name { flex: 1; font-size: 14px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .item-time { font-size: 11px; color: #445566; flex-shrink: 0; }
+
+    .item-btn-group { display: flex; gap: 4px; }
+    .item-btn-group .item-btn { flex: 1; }
 
     .item-btn {
       background: none;
@@ -1089,16 +1103,15 @@ function renderNameList(scrollToBottom = false) {
         </div>
       `;
     } else {
-      div.classList.add('editing');
       div.innerHTML = `
-        <div class="item-edit-row">
+        <div class="item-info-row">
           <span class="item-idx">${i + 1}</span>
           <span class="item-name">${escHtml(item.name)}</span>
           <span class="item-time">${item.time}</span>
         </div>
-        <div class="item-edit-row">
-          <button class="item-btn edit" data-i="${i}" style="flex:1">編輯</button>
-          <button class="item-btn del"  data-i="${i}" style="flex:1">刪除</button>
+        <div class="item-btn-group">
+          <button class="item-btn edit" data-i="${i}">編輯</button>
+          <button class="item-btn del"  data-i="${i}">刪除</button>
         </div>
       `;
     }
