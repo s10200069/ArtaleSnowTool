@@ -674,10 +674,16 @@ earlyDetectBtn.addEventListener('click', async () => {
   stopCountdown();
   earlyDetectBtn.disabled = true;
   ocrBusy = true;
-  await runOCR();
+  const recorded = await runOCR();
   ocrBusy = false;
-  // Reset: back to 1 s polling (firstDetection already false, so next record → 10 min wait)
-  startMotionPoll();
+  if (recorded) {
+    firstDetection = false;
+    clearTimeout(motionTimer);
+    setWaiting(true);
+    if (isRunning) motionTimer = setTimeout(startMotionPoll, 10 * 60 * 1000);
+  } else {
+    startMotionPoll();
+  }
 });
 
 function setWaiting(waiting) {
@@ -699,7 +705,7 @@ function startMotionPoll() {
       ocrBusy = false;
       if (recorded) {
         firstDetection = false;
-        // After every record, wait 10 minutes then resume polling
+        clearTimeout(motionTimer);
         setWaiting(true);
         if (isRunning) motionTimer = setTimeout(startMotionPoll, 10 * 60 * 1000);
         return;
@@ -889,7 +895,7 @@ function parseText(raw) {
       if (!lineTrimmed) continue;
       finalName = matchRoster(lineTrimmed);
       if (!finalName) continue;
-      console.log(`[MATCH] roster="${finalName}" input="${lineTrimmed}"`);
+      console.log(`[MATCH] roster="${finalName}" rosterClean="${finalName.replace(/\s+/g,'')}" input="${lineTrimmed}"`);
       break;
     }
     if (!finalName) return false;
