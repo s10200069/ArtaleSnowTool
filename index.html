@@ -864,12 +864,13 @@ function renderRoster() {
 // Returns the full name from roster if at least floor(name.length/2) consecutive
 // characters (case-insensitive) are found in the OCR string, otherwise null.
 function matchRoster(ocrName) {
+  const ocrClean = ocrName.replace(/\s+/g, '');
   for (const r of roster) {
-    const need = Math.max(1, Math.floor(r.name.length / 2));
-    // Try every consecutive substring of length `need` from the roster name (case-sensitive)
-    for (let start = 0; start <= r.name.length - need; start++) {
-      const sub = r.name.slice(start, start + need);
-      if (ocrName.includes(sub)) return r.name;
+    const rClean = r.name.replace(/\s+/g, '');
+    const need = Math.max(1, Math.floor(rClean.length / 2));
+    for (let start = 0; start <= rClean.length - need; start++) {
+      const sub = rClean.slice(start, start + need);
+      if (ocrClean.includes(sub)) return r.name;
     }
   }
   return null;
@@ -877,10 +878,8 @@ function matchRoster(ocrName) {
 
 // ── Parse OCR text ─────────────────────────────────────────────────────────────
 function parseText(raw) {
-  // Remove spaces inserted between adjacent CJK characters by Tesseract
-  let cleaned = raw;
-  for (let i = 0; i < 4; i++)
-    cleaned = cleaned.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, '$1$2');
+  // Remove spaces within each line (handles CJK, English, mixed)
+  const cleaned = raw.split('\n').map(line => line.replace(/\s+/g, '')).join('\n');
 
   let finalName = null;
 
