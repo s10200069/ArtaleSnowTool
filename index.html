@@ -978,7 +978,7 @@ function renderRoster() {
   }
   rosterList.innerHTML = '';
   roster.forEach((r, i) => {
-    const minMatch = Math.max(1, Math.floor(r.name.length / 2));
+    const minMatch = Math.max(1, Math.round(r.name.length / 2));
     const div = document.createElement('div');
     div.className = 'roster-item';
     div.innerHTML = `
@@ -1017,7 +1017,7 @@ function matchRoster(ocrName) {
   const ocrClean = ocrName.replace(/\s+/g, '');
   for (const r of roster) {
     const rClean = r.name.replace(/\s+/g, '');
-    const need = Math.max(1, Math.floor(rClean.length / 2));
+    const need = Math.max(1, Math.round(rClean.length / 2));
     for (let start = 0; start <= rClean.length - need; start++) {
       const sub = rClean.slice(start, start + need);
       if (ocrClean.includes(sub)) return r.name;
