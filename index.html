@@ -279,6 +279,11 @@
       gap: 6px;
     }
     .name-item.new-item { animation: fadeIn .25s ease; }
+    .name-item.latest {
+      border: 1px solid #7eb8f7;
+      border-radius: 6px;
+      box-shadow: 0 0 8px #7eb8f766, inset 0 0 6px #7eb8f711;
+    }
     .name-item:last-child { border-bottom: none; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-4px); }
@@ -1155,6 +1160,10 @@ function renderNameList(scrollToBottom = false) {
 
   countBadge.textContent = items.length + ' 筆';
   if (scrollToBottom) nameList.scrollTop = nameList.scrollHeight;
+  // Highlight latest item
+  nameList.querySelectorAll('.name-item.latest').forEach(el => el.classList.remove('latest'));
+  const allItems = nameList.querySelectorAll('.name-item');
+  if (allItems.length) allItems[allItems.length - 1].classList.add('latest');
 }
 
 // ── Add name to list ───────────────────────────────────────────────────────────
