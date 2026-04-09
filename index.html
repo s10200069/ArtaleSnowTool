@@ -184,11 +184,22 @@
       align-items: center;
       padding: 7px 10px;
       border-bottom: 1px solid #1e2030;
+      cursor: default;
+      transition: background .1s;
       gap: 8px;
     }
     .roster-item:last-child { border-bottom: none; }
-    .roster-item-name { flex: 1; font-size: 13px; color: #ddeeff; }
+    .roster-item.drag-over { background: #1e2a3a; border-top: 2px solid #7eb8f7; }
+    .roster-item.dragging  { opacity: .4; }
+    .roster-drag-handle { cursor: grab; color: #445566; font-size: 14px; padding: 0 4px; flex-shrink: 0; user-select: none; }
+    .roster-drag-handle:hover { color: #8899aa; }
+    .roster-item-order { font-size: 18px; font-weight: bold; color: #7eb8f7; width: 28px; text-align: center; flex-shrink: 0; }
+    .item-seq { font-size: 11px; color: #445566; flex-shrink: 0; }
+    .item-order-badge { font-size: 22px; font-weight: bold; color: #7eb8f7; width: 36px; text-align: right; flex-shrink: 0; }
+    .item-idx { font-size: 11px; color: #445566; width: 22px; text-align: right; flex-shrink: 0; }
+    .roster-item-name { flex: 1; font-size: 13px; color: #ddeeff; user-select: text; cursor: text; }
     .roster-item-hint { font-size: 11px; color: #445566; flex-shrink: 0; }
+
 
     .roster-btn {
       background: none;
@@ -289,7 +300,6 @@
       from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .item-idx  { font-size: 11px; color: #445566; width: 22px; text-align: right; flex-shrink: 0; }
     .item-name { flex: 1; font-size: 14px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .item-time { font-size: 11px; color: #445566; flex-shrink: 0; }
 
@@ -951,13 +961,22 @@ function commitRoster() {
   if (!name) return;
 
   if (editingIndex !== null) {
+    if (roster.some((r, i) => r.name === name && i !== editingIndex)) {
+      rosterInput.style.borderColor = '#cc5555';
+      setTimeout(() => rosterInput.style.borderColor = '', 1200);
+      return;
+    }
     roster[editingIndex].name = name;
     editingIndex = null;
     rosterAddBtn.textContent = '新增';
     rosterAddBtn.classList.remove('saving');
     rosterCancelBtn.style.display = 'none';
   } else {
-    if (roster.some(r => r.name === name)) { rosterInput.value = ''; return; } // no duplicate
+    if (roster.some(r => r.name === name)) {
+      rosterInput.style.borderColor = '#cc5555';
+      setTimeout(() => rosterInput.style.borderColor = '', 1200);
+      return;
+    } // no duplicate
     roster.push({ name });
   }
 
@@ -986,7 +1005,11 @@ function renderRoster() {
     const minMatch = Math.max(1, Math.round(r.name.length / 2));
     const div = document.createElement('div');
     div.className = 'roster-item';
+    div.draggable = true;
+    div.dataset.i = i;
     div.innerHTML = `
+      <span class="roster-drag-handle" title="拖曳排序">⠿</span>
+      <span class="roster-item-order">${i + 1}</span>
       <span class="roster-item-name">${escHtml(r.name)}</span>
       <span class="roster-item-hint">對 ${minMatch} 字</span>
       <button class="roster-btn edit" data-i="${i}">編輯</button>
@@ -1010,6 +1033,36 @@ function renderRoster() {
     btn.addEventListener('click', () => {
       roster.splice(+btn.dataset.i, 1);
       if (editingIndex !== null) { editingIndex = null; rosterAddBtn.textContent = '新增'; rosterAddBtn.classList.remove('saving'); rosterCancelBtn.style.display = 'none'; rosterInput.value = ''; }
+      renderRoster();
+    });
+  });
+
+  // Drag-and-drop reorder
+  let dragSrcIdx = null;
+  rosterList.querySelectorAll('.roster-item').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      if (e.target.classList.contains('roster-item-name')) { e.preventDefault(); return; }
+      dragSrcIdx = +row.dataset.i;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      rosterList.querySelectorAll('.roster-item').forEach(r => r.classList.remove('dragging', 'drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      rosterList.querySelectorAll('.roster-item').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      const targetIdx = +row.dataset.i;
+      if (dragSrcIdx === null || dragSrcIdx === targetIdx) return;
+      const [moved] = roster.splice(dragSrcIdx, 1);
+      roster.splice(targetIdx, 0, moved);
+      dragSrcIdx = null;
       renderRoster();
     });
   });
@@ -1085,6 +1138,7 @@ stopCountdownBtn.addEventListener('click', stopCountdown);
 
 // ── Name list render ──────────────────────────────────────────────────────────
 let editingItemIndex = null;
+let latestItemIndex  = null;
 
 function renderNameList(scrollToBottom = false) {
   if (items.length === 0) {
@@ -1108,9 +1162,11 @@ function renderNameList(scrollToBottom = false) {
         </div>
       `;
     } else {
+      const orderNum = item.order != null ? `${item.order}` : '';
       div.innerHTML = `
         <div class="item-info-row">
           <span class="item-idx">${i + 1}</span>
+          <span class="item-order-badge" style="${orderNum ? '' : 'visibility:hidden'}">${orderNum || '0'}</span>
           <span class="item-name">${escHtml(item.name)}</span>
           <span class="item-time">${item.time}</span>
         </div>
@@ -1135,7 +1191,11 @@ function renderNameList(scrollToBottom = false) {
 
     function commitEdit() {
       const v = input.value.trim();
-      if (v) items[editingItemIndex].name = v;
+      if (v) {
+        items[editingItemIndex].name = v;
+        const ri = roster.findIndex(r => r.name === v);
+        items[editingItemIndex].order = ri !== -1 ? ri + 1 : null;
+      }
       editingItemIndex = null;
       renderNameList();
     }
@@ -1152,8 +1212,13 @@ function renderNameList(scrollToBottom = false) {
   });
   nameList.querySelectorAll('.item-btn.del').forEach(btn => {
     btn.addEventListener('click', () => {
-      items.splice(+btn.dataset.i, 1);
+      const di = +btn.dataset.i;
+      items.splice(di, 1);
       editingItemIndex = null;
+      if (latestItemIndex !== null) {
+        if (latestItemIndex === di) latestItemIndex = null;
+        else if (latestItemIndex > di) latestItemIndex--;
+      }
       renderNameList();
     });
   });
@@ -1162,14 +1227,19 @@ function renderNameList(scrollToBottom = false) {
   if (scrollToBottom) nameList.scrollTop = nameList.scrollHeight;
   // Highlight latest item
   nameList.querySelectorAll('.name-item.latest').forEach(el => el.classList.remove('latest'));
-  const allItems = nameList.querySelectorAll('.name-item');
-  if (allItems.length) allItems[allItems.length - 1].classList.add('latest');
+  if (latestItemIndex !== null) {
+    const allItems = nameList.querySelectorAll('.name-item');
+    if (allItems[latestItemIndex]) allItems[latestItemIndex].classList.add('latest');
+  }
 }
 
 // ── Add name to list ───────────────────────────────────────────────────────────
 function addItem(name) {
   const time = new Date().toTimeString().slice(0, 8);
-  items.push({ name, time });
+  const rosterIdx = roster.findIndex(r => r.name === name);
+  const order = rosterIdx !== -1 ? rosterIdx + 1 : null;
+  items.push({ name, time, order });
+  latestItemIndex = items.length - 1;
   renderNameList(true);
   // Animate only the last item
   const last = nameList.lastElementChild;
