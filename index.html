@@ -316,9 +316,9 @@
       background: #0f1e2e;
     }
     .rp-item.expired {
-      border-bottom: 1px solid #cc4444;
-      box-shadow: 0 0 8px #cc444466, inset 0 0 6px #cc444411;
-      background: #1e0f0f;
+      border-bottom: 1px solid #7eb8f7;
+      box-shadow: 0 0 8px #7eb8f766, inset 0 0 6px #7eb8f711;
+      background: #0f1e2e;
     }
     .name-item:last-child { border-bottom: none; }
     @keyframes fadeIn {
@@ -728,6 +728,8 @@ toggleBtn.addEventListener('click', () => {
 
 async function startTracking() {
   if (!region) { setStatus('yellow', '請先在預覽上框選區域'); return; }
+  countdownExpired = true;
+  highlightRosterPreview();
 
   setStatus('yellow', '初始化 OCR 引擎（首次需下載語言資料）…');
   toggleBtn.disabled = true;
@@ -818,6 +820,8 @@ earlyDetectBtn.addEventListener('click', async () => {
   if (ocrBusy || !isRunning) return;
   // Cancel the 10-min wait and trigger OCR immediately
   clearTimeout(motionTimer);
+  countdownExpired = true;
+  highlightRosterPreview();
   stopCountdown();
   earlyDetectBtn.disabled = true;
   ocrBusy = true;
@@ -1189,7 +1193,11 @@ function closeAlert() {
 }
 
 document.getElementById('alertOkBtn').addEventListener('click', closeAlert);
-stopCountdownBtn.addEventListener('click', stopCountdown);
+stopCountdownBtn.addEventListener('click', () => {
+  countdownExpired = true;
+  highlightRosterPreview();
+  stopCountdown();
+});
 
 // ── Name list render ──────────────────────────────────────────────────────────
 let editingItemIndex = null;
