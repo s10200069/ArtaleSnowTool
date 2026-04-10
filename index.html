@@ -87,8 +87,22 @@
 
     .control-panel.fullwidth > * {
       width: 100%;
-      max-width: 480px;
+      max-width: 600px;
     }
+
+    .control-panel.fullwidth button         { font-size: 18px; padding: 12px 8px; }
+    .control-panel.fullwidth .status-bar    { font-size: 18px; }
+    .control-panel.fullwidth #countdownText { font-size: 17px !important; }
+    .control-panel.fullwidth .list-header   { font-size: 18px; }
+    .control-panel.fullwidth #countBadge    { font-size: 17px; }
+    .control-panel.fullwidth .manual-add-row select { font-size: 18px; }
+    .control-panel.fullwidth .item-idx      { font-size: 16px; }
+    .control-panel.fullwidth .item-name     { font-size: 20px; }
+    .control-panel.fullwidth .item-time     { font-size: 16px; }
+    .control-panel.fullwidth .item-btn      { font-size: 17px; }
+    .control-panel.fullwidth .item-order-badge { font-size: 28px; }
+    .control-panel.fullwidth .rp-order      { font-size: 24px; }
+    .control-panel.fullwidth .rp-name       { font-size: 18px; }
 
     .buttons { display: flex; gap: 8px; }
 
@@ -161,6 +175,7 @@
       outline: none;
     }
     .modal-input-row input:focus { border-color: #7eb8f7; }
+    #rosterHint { font-size: 12px; color: #cc5555; min-height: 16px; }
 
     .modal-input-row button { flex: none; padding: 7px 14px; font-size: 13px; }
     #rosterAddBtn  { background: #2e7d4f; color: #fff; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
@@ -511,6 +526,7 @@
       <button id="rosterAddBtn">新增</button>
       <button id="rosterCancelBtn" style="display:none">取消</button>
     </div>
+    <div id="rosterHint"></div>
     <div class="roster-list" id="rosterList">
       <div class="roster-empty">尚無名稱</div>
     </div>
@@ -989,14 +1005,25 @@ rosterInput.addEventListener('keydown', e => {
   if (e.key === 'Escape' && editingIndex !== null) rosterCancelBtn.click();
 });
 
+let rosterHintTimer = null;
+function showRosterHint(msg) {
+  const el = document.getElementById('rosterHint');
+  el.textContent = msg;
+  rosterInput.style.borderColor = '#cc5555';
+  clearTimeout(rosterHintTimer);
+  rosterHintTimer = setTimeout(() => {
+    el.textContent = '';
+    rosterInput.style.borderColor = '';
+  }, 2000);
+}
+
 function commitRoster() {
   const name = rosterInput.value.trim();
   if (!name) return;
 
   if (editingIndex !== null) {
     if (roster.some((r, i) => r.name === name && i !== editingIndex)) {
-      rosterInput.style.borderColor = '#cc5555';
-      setTimeout(() => rosterInput.style.borderColor = '', 1200);
+      showRosterHint('名稱已存在');
       return;
     }
     roster[editingIndex].name = name;
@@ -1006,10 +1033,13 @@ function commitRoster() {
     rosterCancelBtn.style.display = 'none';
   } else {
     if (roster.some(r => r.name === name)) {
-      rosterInput.style.borderColor = '#cc5555';
-      setTimeout(() => rosterInput.style.borderColor = '', 1200);
+      showRosterHint('名稱已存在');
       return;
     } // no duplicate
+    if (roster.length >= 6) {
+      showRosterHint('已達上限 6 人');
+      return;
+    }
     roster.push({ name });
   }
 
