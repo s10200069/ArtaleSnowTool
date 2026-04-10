@@ -251,6 +251,26 @@
     .dot.green  { background: #3dcc7a; box-shadow: 0 0 6px #3dcc7a88; }
     .dot.yellow { background: #f0c040; }
 
+    #rosterPreview {
+      flex-shrink: 0;
+      background: #12141e;
+      border: 1px solid #2e3147;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #rosterPreview:empty { display: none; }
+    .rp-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-bottom: 1px solid #1e2030;
+    }
+    .rp-item:last-child { border-bottom: none; }
+    .rp-order { font-size: 18px; font-weight: bold; color: #7eb8f7; width: 28px; text-align: center; flex-shrink: 0; }
+    .rp-name  { flex: 1; font-size: 13px; color: #ddeeff; user-select: text; cursor: text; }
+    .rp-hint  { font-size: 11px; color: #445566; flex-shrink: 0; }
+
     .list-header {
       display: flex;
       justify-content: space-between;
@@ -290,10 +310,15 @@
       gap: 6px;
     }
     .name-item.new-item { animation: fadeIn .25s ease; }
-    .name-item.latest {
-      border: 1px solid #7eb8f7;
-      border-radius: 6px;
+    .rp-item.latest {
+      border-bottom: 1px solid #7eb8f7;
       box-shadow: 0 0 8px #7eb8f766, inset 0 0 6px #7eb8f711;
+      background: #0f1e2e;
+    }
+    .rp-item.expired {
+      border-bottom: 1px solid #cc4444;
+      box-shadow: 0 0 8px #cc444466, inset 0 0 6px #cc444411;
+      background: #1e0f0f;
     }
     .name-item:last-child { border-bottom: none; }
     @keyframes fadeIn {
@@ -457,6 +482,8 @@
       <span id="statusText">點選「選擇畫面」</span>
       <span id="countdownText" style="margin-left:auto;font-size:12px;color:#f0c040;display:none;"></span>
     </div>
+
+    <div id="rosterPreview"></div>
 
     <div class="list-header">
       <span>施放名單</span>
@@ -755,6 +782,8 @@ function startCountdown(seconds) {
   clearTimeout(alertHideTimer);
   countdownText.style.display = 'inline';
   stopCountdownBtn.disabled = false;
+  countdownExpired = false;
+  highlightRosterPreview();
   let remaining = seconds;
 
   // Show popup when 10 seconds remain
@@ -767,7 +796,7 @@ function startCountdown(seconds) {
     const m = Math.floor(remaining / 60).toString().padStart(2, '0');
     const s = (remaining % 60).toString().padStart(2, '0');
     countdownText.textContent = `雪花剩餘時間 ${m}:${s}`;
-    if (remaining <= 0) stopCountdown();
+    if (remaining <= 0) { countdownExpired = true; highlightRosterPreview(); stopCountdown(); return; }
     else remaining--;
   }
 
@@ -984,7 +1013,33 @@ function commitRoster() {
   renderRoster();
 }
 
+function renderRosterPreview() {
+  const el = document.getElementById('rosterPreview');
+  el.innerHTML = '';
+  roster.forEach((r, i) => {
+    const div = document.createElement('div');
+    div.className = 'rp-item';
+    div.innerHTML = `
+      <span class="rp-order">${i + 1}</span>
+      <span class="rp-name">${escHtml(r.name)}</span>
+    `;
+    el.appendChild(div);
+  });
+  highlightRosterPreview();
+}
+
+function highlightRosterPreview() {
+  const rpItems = document.querySelectorAll('.rp-item');
+  rpItems.forEach(el => el.classList.remove('latest', 'expired'));
+  if (!latestCasterName) return;
+  const rosterIdx = roster.findIndex(r => r.name === latestCasterName);
+  if (rosterIdx === -1) return;
+  const target = rpItems[rosterIdx];
+  if (target) target.classList.add(countdownExpired ? 'expired' : 'latest');
+}
+
 function renderRoster() {
+  renderRosterPreview();
   // Sync the manual-add select in the main panel
   const prev = manualSelect.value;
   manualSelect.innerHTML = '<option value="">— 選擇角色 —</option>';
@@ -1139,6 +1194,8 @@ stopCountdownBtn.addEventListener('click', stopCountdown);
 // ── Name list render ──────────────────────────────────────────────────────────
 let editingItemIndex = null;
 let latestItemIndex  = null;
+let latestCasterName = null;
+let countdownExpired = false;
 
 function renderNameList(scrollToBottom = false) {
   if (items.length === 0) {
@@ -1195,6 +1252,7 @@ function renderNameList(scrollToBottom = false) {
         items[editingItemIndex].name = v;
         const ri = roster.findIndex(r => r.name === v);
         items[editingItemIndex].order = ri !== -1 ? ri + 1 : null;
+        if (editingItemIndex === latestItemIndex) latestCasterName = v;
       }
       editingItemIndex = null;
       renderNameList();
@@ -1225,12 +1283,7 @@ function renderNameList(scrollToBottom = false) {
 
   countBadge.textContent = items.length + ' 筆';
   if (scrollToBottom) nameList.scrollTop = nameList.scrollHeight;
-  // Highlight latest item
-  nameList.querySelectorAll('.name-item.latest').forEach(el => el.classList.remove('latest'));
-  if (latestItemIndex !== null) {
-    const allItems = nameList.querySelectorAll('.name-item');
-    if (allItems[latestItemIndex]) allItems[latestItemIndex].classList.add('latest');
-  }
+  highlightRosterPreview();
 }
 
 // ── Add name to list ───────────────────────────────────────────────────────────
@@ -1239,7 +1292,9 @@ function addItem(name) {
   const rosterIdx = roster.findIndex(r => r.name === name);
   const order = rosterIdx !== -1 ? rosterIdx + 1 : null;
   items.push({ name, time, order });
-  latestItemIndex = items.length - 1;
+  latestItemIndex  = items.length - 1;
+  latestCasterName = name;
+  countdownExpired = false;
   renderNameList(true);
   // Animate only the last item
   const last = nameList.lastElementChild;
