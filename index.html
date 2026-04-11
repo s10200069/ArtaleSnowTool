@@ -95,7 +95,10 @@
     .control-panel.fullwidth #countdownText { font-size: 17px !important; }
     .control-panel.fullwidth .list-header   { font-size: 18px; }
     .control-panel.fullwidth #countBadge    { font-size: 17px; }
-    .control-panel.fullwidth .manual-add-row select { font-size: 18px; }
+    .control-panel.fullwidth .manual-add-row select { font-size: 16px; }
+    .control-panel.fullwidth #manualAddBtn { font-size: 16px; }
+    .control-panel.fullwidth .item-edit-select { font-size: 16px; }
+    .control-panel.fullwidth .item-edit-input  { font-size: 16px; }
     .control-panel.fullwidth .item-idx      { font-size: 16px; }
     .control-panel.fullwidth .item-name     { font-size: 18px; }
     .control-panel.fullwidth .item-time     { font-size: 16px; }
@@ -283,7 +286,7 @@
     }
     .rp-item:last-child { border-bottom: none; }
     .rp-order { font-size: 22px; font-weight: bold; color: #7eb8f7; width: 28px; text-align: center; flex-shrink: 0; }
-    .rp-name  { flex: 1; font-size: 14px; color: #ddeeff; user-select: text; cursor: text; }
+    .rp-name  { flex: 1; font-size: 16px; color: #ddeeff; user-select: text; cursor: text; }
     .rp-hint  { font-size: 11px; color: #445566; flex-shrink: 0; }
 
     .list-header {
@@ -340,7 +343,7 @@
       from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .item-name { flex: 1; font-size: 13px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .item-name { flex: 1; font-size: 14px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .item-time { font-size: 11px; color: #445566; flex-shrink: 0; }
 
     .item-btn-group { display: flex; gap: 4px; }
@@ -350,7 +353,7 @@
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 13px;
       padding: 2px 5px;
       border-radius: 4px;
       flex-shrink: 0;
@@ -379,7 +382,7 @@
       border-radius: 4px;
       color: #e0e0e0;
       padding: 4px 6px;
-      font-size: 16px;
+      font-size: 12px;
       font-family: inherit;
       outline: none;
       cursor: pointer;
@@ -393,7 +396,7 @@
       border-radius: 4px;
       color: #e0e0e0;
       padding: 4px 8px;
-      font-size: 16px;
+      font-size: 12px;
       font-family: inherit;
       outline: none;
       width: 100%;
@@ -411,13 +414,13 @@
       border-radius: 6px;
       color: #e0e0e0;
       padding: 6px 8px;
-      font-size: 16px;
+      font-size: 12px;
       font-family: inherit;
       outline: none;
       cursor: pointer;
     }
     .manual-add-row select:focus { border-color: #7eb8f7; }
-    #manualAddBtn { background: #2e7d4f; color: #fff; flex: none; padding: 6px 12px; font-size: 16px; border-radius: 6px; }
+    #manualAddBtn { background: #2e7d4f; color: #fff; flex: none; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
 
     .empty-hint { text-align: center; color: #334455; font-size: 13px; padding: 30px 10px; }
 
@@ -808,18 +811,17 @@ function startCountdown(seconds) {
   highlightRosterPreview();
   let remaining = seconds;
 
-  // Show popup when 10 seconds remain
-  alertTimer = setTimeout(() => {
-    snowAlert.classList.add('show');
-    alertHideTimer = setTimeout(closeAlert, 10000);
-  }, (seconds - 10) * 1000);
-
   function update() {
     const m = Math.floor(remaining / 60).toString().padStart(2, '0');
     const s = (remaining % 60).toString().padStart(2, '0');
     countdownText.textContent = `雪花剩餘時間 ${m}:${s}`;
     if (remaining <= 0) { countdownExpired = true; highlightRosterPreview(); stopCountdown(); return; }
-    else remaining--;
+    if (remaining === 10) {
+      clearTimeout(alertHideTimer);
+      snowAlert.classList.add('show');
+      alertHideTimer = setTimeout(closeAlert, 10000);
+    }
+    remaining--;
   }
 
   update();
