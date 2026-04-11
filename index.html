@@ -97,12 +97,12 @@
     .control-panel.fullwidth #countBadge    { font-size: 17px; }
     .control-panel.fullwidth .manual-add-row select { font-size: 18px; }
     .control-panel.fullwidth .item-idx      { font-size: 16px; }
-    .control-panel.fullwidth .item-name     { font-size: 20px; }
+    .control-panel.fullwidth .item-name     { font-size: 18px; }
     .control-panel.fullwidth .item-time     { font-size: 16px; }
     .control-panel.fullwidth .item-btn      { font-size: 17px; }
-    .control-panel.fullwidth .item-order-badge { font-size: 28px; }
-    .control-panel.fullwidth .rp-order      { font-size: 24px; }
-    .control-panel.fullwidth .rp-name       { font-size: 18px; }
+    .control-panel.fullwidth .item-order-badge { font-size: 24px; }
+    .control-panel.fullwidth .rp-order      { font-size: 28px; }
+    .control-panel.fullwidth .rp-name       { font-size: 20px; }
 
     .buttons { display: flex; gap: 8px; }
 
@@ -210,7 +210,7 @@
     .roster-drag-handle:hover { color: #8899aa; }
     .roster-item-order { font-size: 18px; font-weight: bold; color: #7eb8f7; width: 28px; text-align: center; flex-shrink: 0; }
     .item-seq { font-size: 11px; color: #445566; flex-shrink: 0; }
-    .item-order-badge { font-size: 22px; font-weight: bold; color: #7eb8f7; width: 36px; text-align: right; flex-shrink: 0; }
+    .item-order-badge { font-size: 18px; font-weight: bold; color: #7eb8f7; width: 36px; text-align: right; flex-shrink: 0; }
     .item-idx { font-size: 11px; color: #445566; width: 22px; text-align: right; flex-shrink: 0; }
     .roster-item-name { flex: 1; font-size: 13px; color: #ddeeff; user-select: text; cursor: text; }
     .roster-item-hint { font-size: 11px; color: #445566; flex-shrink: 0; }
@@ -282,8 +282,8 @@
       border-bottom: 1px solid #1e2030;
     }
     .rp-item:last-child { border-bottom: none; }
-    .rp-order { font-size: 18px; font-weight: bold; color: #7eb8f7; width: 28px; text-align: center; flex-shrink: 0; }
-    .rp-name  { flex: 1; font-size: 13px; color: #ddeeff; user-select: text; cursor: text; }
+    .rp-order { font-size: 22px; font-weight: bold; color: #7eb8f7; width: 28px; text-align: center; flex-shrink: 0; }
+    .rp-name  { flex: 1; font-size: 14px; color: #ddeeff; user-select: text; cursor: text; }
     .rp-hint  { font-size: 11px; color: #445566; flex-shrink: 0; }
 
     .list-header {
@@ -340,7 +340,7 @@
       from { opacity: 0; transform: translateY(-4px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .item-name { flex: 1; font-size: 14px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .item-name { flex: 1; font-size: 13px; color: #ddeeff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .item-time { font-size: 11px; color: #445566; flex-shrink: 0; }
 
     .item-btn-group { display: flex; gap: 4px; }
@@ -379,7 +379,7 @@
       border-radius: 4px;
       color: #e0e0e0;
       padding: 4px 6px;
-      font-size: 12px;
+      font-size: 16px;
       font-family: inherit;
       outline: none;
       cursor: pointer;
@@ -393,7 +393,7 @@
       border-radius: 4px;
       color: #e0e0e0;
       padding: 4px 8px;
-      font-size: 13px;
+      font-size: 16px;
       font-family: inherit;
       outline: none;
       width: 100%;
@@ -411,13 +411,13 @@
       border-radius: 6px;
       color: #e0e0e0;
       padding: 6px 8px;
-      font-size: 13px;
+      font-size: 16px;
       font-family: inherit;
       outline: none;
       cursor: pointer;
     }
     .manual-add-row select:focus { border-color: #7eb8f7; }
-    #manualAddBtn { background: #2e7d4f; color: #fff; flex: none; padding: 6px 12px; font-size: 13px; border-radius: 6px; }
+    #manualAddBtn { background: #2e7d4f; color: #fff; flex: none; padding: 6px 12px; font-size: 16px; border-radius: 6px; }
 
     .empty-hint { text-align: center; color: #334455; font-size: 13px; padding: 30px 10px; }
 
@@ -498,6 +498,10 @@
       <span id="countdownText" style="margin-left:auto;font-size:12px;color:#f0c040;display:none;"></span>
     </div>
 
+    <div class="list-header" id="rosterPreviewHeader" style="display:none">
+      <span>施放順序</span>
+    </div>
+
     <div id="rosterPreview"></div>
 
     <div class="list-header">
@@ -543,10 +547,10 @@
   <button id="alertOkBtn">確定</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="tesseract.min.js"></script>
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────────
-const WAIT_SEC = 600; 
+const WAIT_SEC = 11; 
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let stream     = null;
@@ -971,7 +975,6 @@ document.getElementById('nameListBtn').addEventListener('click', () => {
   rosterInput.focus();
 });
 rosterCloseBtn.addEventListener('click', () => rosterModal.classList.remove('open'));
-rosterModal.addEventListener('click', e => { if (e.target === rosterModal) rosterModal.classList.remove('open'); });
 
 // Manual add (in cast list panel)
 const manualSelect = document.getElementById('manualSelect');
@@ -1049,7 +1052,9 @@ function commitRoster() {
 
 function renderRosterPreview() {
   const el = document.getElementById('rosterPreview');
+  const hdr = document.getElementById('rosterPreviewHeader');
   el.innerHTML = '';
+  if (hdr) hdr.style.display = roster.length ? '' : 'none';
   roster.forEach((r, i) => {
     const div = document.createElement('div');
     div.className = 'rp-item';
@@ -1223,6 +1228,17 @@ function closeAlert() {
 }
 
 document.getElementById('alertOkBtn').addEventListener('click', closeAlert);
+
+// ESC key: close roster modal or snowflake alert
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (rosterModal.classList.contains('open')) {
+    rosterModal.classList.remove('open');
+  } else if (snowAlert.classList.contains('show')) {
+    closeAlert();
+  }
+});
+
 stopCountdownBtn.addEventListener('click', () => {
   countdownExpired = true;
   highlightRosterPreview();
@@ -1261,7 +1277,6 @@ function renderNameList(scrollToBottom = false) {
       div.innerHTML = `
         <div class="item-info-row">
           <span class="item-idx">${i + 1}</span>
-          <span class="item-order-badge" style="${orderNum ? '' : 'visibility:hidden'}">${orderNum || '0'}</span>
           <span class="item-name">${escHtml(item.name)}</span>
           <span class="item-time">${item.time}</span>
         </div>
@@ -1337,9 +1352,6 @@ function addItem(name) {
   // Animate only the last item
   const last = nameList.lastElementChild;
   if (last) last.classList.add('new-item');
-
-  // Reset the 9-minute countdown every time a record is written
-  scheduleAlert();
 }
 
 // ── Clear ──────────────────────────────────────────────────────────────────────
