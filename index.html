@@ -728,7 +728,11 @@ previewCanvas.addEventListener('mouseup', e => {
 
   toggleBtn.disabled = false;
   const rw = Math.round(region.w), rh = Math.round(region.h);
-  setStatus('yellow', `已選取 ${rw}×${rh}，按「開始」追蹤`);
+  if (isRunning) {
+    setStatus('green', `區域已更新 ${rw}×${rh}，追蹤中…`);
+  } else {
+    setStatus('yellow', `已選取 ${rw}×${rh}，按「開始」追蹤`);
+  }
   previewLabel.textContent = `已選取 ${rw}×${rh} 區域（可重新拖曳調整）`;
 });
 
