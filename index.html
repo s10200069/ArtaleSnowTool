@@ -334,10 +334,11 @@
       background: #0f1e2e;
     }
     .rp-item.expired {
-      border-bottom: 1px solid #7eb8f7;
-      box-shadow: 0 0 8px #7eb8f766, inset 0 0 6px #7eb8f711;
-      background: #0f1e2e;
+      border-bottom: 1px solid #ff8c00;
+      box-shadow: 0 0 8px #ff8c0066, inset 0 0 6px #ff8c0011;
+      background: #1e1200;
     }
+    .rp-item.expired .rp-order { color: #ff8c00; }
     .name-item:last-child { border-bottom: none; }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-4px); }
@@ -553,7 +554,7 @@
 <script src="tesseract.min.js"></script>
 <script>
 // ── Config ─────────────────────────────────────────────────────────────────────
-const WAIT_SEC = 600; 
+const WAIT_SEC = 11; 
 
 // ── State ──────────────────────────────────────────────────────────────────────
 let stream     = null;
@@ -812,6 +813,7 @@ function startCountdown(seconds) {
   countdownText.style.display = 'inline';
   stopCountdownBtn.disabled = false;
   countdownExpired = false;
+  naturalExpiry    = false;
   highlightRosterPreview();
   let remaining = seconds;
 
@@ -819,7 +821,7 @@ function startCountdown(seconds) {
     const m = Math.floor(remaining / 60).toString().padStart(2, '0');
     const s = (remaining % 60).toString().padStart(2, '0');
     countdownText.textContent = `雪花剩餘時間 ${m}:${s}`;
-    if (remaining <= 0) { countdownExpired = true; highlightRosterPreview(); stopCountdown(); return; }
+    if (remaining <= 0) { countdownExpired = true; naturalExpiry = true; highlightRosterPreview(); stopCountdown(); return; }
     if (remaining === 10) {
       clearTimeout(alertHideTimer);
       snowAlert.classList.add('show');
@@ -1080,7 +1082,7 @@ function highlightRosterPreview() {
   const rosterIdx = roster.findIndex(r => r.name === latestCasterName);
   if (rosterIdx === -1) return;
   const target = rpItems[rosterIdx];
-  if (target) target.classList.add(countdownExpired ? 'expired' : 'latest');
+  if (target) target.classList.add(naturalExpiry ? 'expired' : 'latest');
 }
 
 function renderRoster() {
@@ -1256,6 +1258,7 @@ let editingItemIndex = null;
 let latestItemIndex  = null;
 let latestCasterName = null;
 let countdownExpired = false;
+let naturalExpiry    = false;
 
 function renderNameList(scrollToBottom = false) {
   if (items.length === 0) {
